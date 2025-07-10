@@ -1,0 +1,160 @@
+# Build artifacts
+build/
+cmake-build-*/
+out/
+bin/
+lib/
+dist/
+
+# Object files
+*.o
+*.obj
+*.ko
+*.elf
+*.gch
+*.pch
+
+# Libraries
+*.lib
+*.a
+*.la
+*.lo
+*.so
+*.so.*
+*.dylib
+*.dll
+
+# Executables
+*.exe
+*.out
+*.app
+ares_edge_system
+ares_edge_system_optimized
+ares_tests
+ares_demo
+
+# CUDA/GPU files
+*.i
+*.ii
+*.gpu
+*.ptx
+*.cubin
+*.fatbin
+*.cudafe*
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.vcxproj*
+*.sln
+
+# Build logs and debug files
+*.log
+*.tlog
+compile_commands.json
+.clang-format
+.clang-tidy
+
+# Dependencies
+external/
+third_party/
+vendor/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.Python
+venv/
+env/
+
+# Documentation
+docs/_build/
+doxygen/
+
+# Test and coverage
+*.gcda
+*.gcno
+*.gcov
+coverage/
+test-results/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+*.cache
+.cache/
+
+# OS specific
+.directory
+.Trash-*
+.nfs*
+
+# Security sensitive files
+*.key
+*.pem
+*.p12
+*.pfx
+api_keys.txt
+credentials.json
+config.local.json
+
+# Debian packages (from downloads)
+*.deb
+*.deb.*
+
+# Core dumps
+core
+core.*
+*.stackdump
+
+# Profiling
+*.nvprof
+*.nsys-rep
+*.qdrep
+*.qdstrm
+perf.data*
+gmon.out
+
+# ROS2 (if integrated)
+install/
+log/
+build_isolated/
+devel_isolated/
+
+# Unreal Engine
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+.vscode/
+.vs/
+*.VC.db
+*.opensdf
+*.opendb
+*.sdf
+*.sln
+*.suo
+*.xcodeproj
+*.xcworkspace
+
+# Custom
+local/
+private/
+sensitive/
+*.secret

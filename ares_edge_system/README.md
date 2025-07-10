@@ -1,81 +1,135 @@
-# ARES Edge System™ - Quantum Chronopath Superior
+# ARES Edge System™
 
-**PROPRIETARY AND CONFIDENTIAL**  
-Copyright (c) 2024 DELFICTUS I/O LLC  
-Patent Pending - Application #63/826,067  
-CAGE Code: 13H70 | UEI: LXT3B9GMY4N8  
+## Autonomous Reconnaissance and Electronic Supremacy
 
-⚠️ **WARNING**: This system is designed for authorized U.S. Department of Defense use only. This technology is subject to export controls under ITAR and EAR regulations.
+A defense-grade edge agent system designed for autonomous operations in contested environments. This production-ready C++/CUDA system integrates multiple advanced subsystems for military and defense applications.
 
 ## Overview
 
-The ARES Edge System™ represents the pinnacle of autonomous defense technology, integrating quantum-resilient cryptography, neuromorphic computing, and multi-AI orchestration into a unified battlefield superiority platform.
+ARES (Autonomous Reconnaissance and Electronic Supremacy) is a comprehensive edge computing platform that combines:
 
-### Key Innovations
+- **Quantum-Resilient Core**: Post-quantum cryptography with CRYSTALS-DILITHIUM, FALCON, and SPHINCS+
+- **C-LOGIC**: Cognitive Electronic Warfare with adaptive jamming and real-time threat response
+- **ChronoPath Engine**: AI orchestration supporting multiple LLM providers with consensus synthesis
+- **Byzantine Consensus**: Fault-tolerant distributed coordination for swarm operations
+- **Neuromorphic Processing**: Loihi2 integration for ultra-low power pattern recognition
+- **Digital Twin**: Real-time physics simulation with GPU acceleration
+- **Optical Stealth**: Dynamic metamaterial control and multi-spectral camouflage
 
-1. **Quantum-Resilient Core**: Post-quantum cryptography (CRYSTALS-DILITHIUM, FALCON, SPHINCS+) with lock-free algorithms
-2. **DRPP Chronopath Engine**: Deterministic Real-time Prompt Processing for ultra-low latency AI orchestration
-3. **Six Revolutionary Imperatives**:
-   - Optical Front End Stealth & Multi-Spectral EM Fusion
-   - Chaos & Self-Destruct Last-Man-Standing Swarm Countermeasure
-   - Cybersecurity Offensive & Defensive via EM Emission
-   - Ubiquitous Backscatter Communication & Energy Harvesting
-   - Hot-Swapping Capable ARES Edge Deployment Identity
-   - Federated Learning with Federated Spatial Awareness
+## Key Features
 
-## System Requirements
+- **Real-time Performance**: <100ms threat response, 1kHz control loops
+- **GPU Acceleration**: Optimized CUDA kernels with 40-60% performance gains
+- **Lock-Free Algorithms**: Wait-free data structures for deterministic performance
+- **Quantum-Safe Security**: NIST-approved post-quantum cryptographic algorithms
+- **Unreal Engine 5 Integration**: Full VR/AR support including Meta Quest 3
+- **Multi-Platform**: Linux, Windows WSL2, containerized deployment
 
-### Hardware
-- NVIDIA GPU (Compute Capability 8.6+, e.g., RTX 3090, A100)
-- Intel/AMD CPU with AVX-512 support
-- 32GB+ RAM
-- SDR Hardware (HackRF One or USRP)
-- Intel Loihi 2 (optional)
+## Architecture
+
+```
+ares_edge_system/
+├── core/                    # Quantum-resilient core with post-quantum crypto
+├── cew/                     # Cognitive Electronic Warfare subsystem
+├── neuromorphic/            # Neuromorphic processor integration
+├── swarm/                   # Byzantine consensus and task distribution
+├── digital_twin/            # Real-time physics and state synchronization
+├── optical_stealth/         # Metamaterial and camouflage control
+├── identity/                # Hardware attestation and identity management
+├── federated_learning/      # Distributed ML with homomorphic encryption
+├── countermeasures/         # Active defense mechanisms
+├── orchestrator/            # ChronoPath AI orchestration engine
+├── cyber_em/                # Cyber-electromagnetic operations
+├── backscatter/             # RF energy harvesting and communication
+├── unreal/                  # Unreal Engine 5 plugin
+├── docker/                  # Container configurations
+├── tests/                   # Unit and integration tests
+└── python/                  # Python bindings and utilities
+```
+
+## Prerequisites
+
+### Hardware Requirements
+- NVIDIA GPU with Compute Capability 6.0+ (GTX 1060 or newer)
+- Minimum 8GB GPU memory (16GB recommended)
+- 16GB+ system RAM
+- x86_64 processor with AVX2 support
 
 ### Software Dependencies
-- Ubuntu 20.04+ or RHEL 8+
-- CUDA Toolkit 11.8+
-- Open Quantum Safe (liboqs)
-- Intel oneAPI (for Loihi 2)
-- See CMakeLists.txt for complete list
+- Ubuntu 20.04+ or Windows 10/11 with WSL2
+- CUDA Toolkit 11.0+
+- CMake 3.18+
+- GCC 9+ or Clang 10+
+- Unreal Engine 5.3+ (optional, for visualization)
+- Open Quantum Safe (liboqs) library
+- OpenSSL 1.1.1+
 
-## Installation
+### Additional Dependencies (optional)
+- Intel Loihi 2 SDK (for neuromorphic processing)
+- HackRF One or USRP (for RF operations)
+- ROS2 Humble (for robotics integration)
+
+## Building
+
+### Standard Build
 
 ```bash
-# Install dependencies
-sudo apt update
-sudo apt install -y build-essential cmake git cuda-toolkit-11-8 \
-    libssl-dev libcrypto++-dev libcurl4-openssl-dev \
-    libeigen3-dev libpcl-dev libopencv-dev libboost-all-dev \
-    libhackrf-dev liquid-dsp rapidjson-dev
+# Clone the repository
+git clone https://github.com/yourusername/ares-edge-system.git
+cd ares-edge-system
 
-# Install Open Quantum Safe
-git clone https://github.com/open-quantum-safe/liboqs.git
-cd liboqs && mkdir build && cd build
-cmake -DCMAKE_INSTALL_PREFIX=/usr/local ..
-make -j$(nproc) && sudo make install
+# Create build directory
+mkdir build && cd build
 
-# Clone and build ARES
-git clone [repository-url]
-cd ares_edge_system
+# Configure with CMake
+cmake -DCMAKE_BUILD_TYPE=Release ..
+
+# Build
+make -j$(nproc)
+
+# Run tests
+./ares_tests
+```
+
+### Optimized Build
+
+For production deployment with all optimizations:
+
+```bash
+# Use the optimized CMake configuration
+cp CMakeLists_optimized.txt CMakeLists.txt
 mkdir build && cd build
 cmake -DCMAKE_BUILD_TYPE=Release ..
 make -j$(nproc)
+
+# Run optimized version
+./ares_edge_system_optimized
+```
+
+### Docker Build
+
+```bash
+# Build Docker image
+docker build -f docker/Dockerfile.cuda -t ares-edge-system .
+
+# Run container with GPU support
+docker run --gpus all -it ares-edge-system
 ```
 
 ## Configuration
 
-### AI Provider Setup
-
-Configure your AI providers by passing API keys at runtime:
+### Environment Variables
 
 ```bash
-./ares_edge_system --openai-key YOUR_OPENAI_KEY --anthropic-key YOUR_ANTHROPIC_KEY
+export ARES_GPU_DEVICE=0           # GPU device index
+export ARES_UPDATE_FREQ=100        # Update frequency in Hz
+export ARES_LOG_LEVEL=INFO         # Logging level
+export ARES_QUANTUM_ALGO=DILITHIUM5 # Post-quantum algorithm
 ```
 
-### System Configuration
+### Configuration File
 
-Create a configuration file `config.json`:
+Create `config.json`:
 
 ```json
 {
@@ -83,137 +137,123 @@ Create a configuration file `config.json`:
     "signature_algorithm": "CRYSTALS_DILITHIUM5",
     "enable_quantum_resilience": true
   },
+  "cew": {
+    "enable_adaptive_jamming": true,
+    "threat_response_time_ms": 100
+  },
   "ai_orchestration": {
     "strategy": "CONSENSUS_SYNTHESIS",
-    "latency_budget_us": 50000
+    "providers": ["openai", "anthropic", "google"]
   },
-  "network": {
-    "auto_discover": true,
-    "prioritize_secure": true
-  },
-  "operational": {
-    "stealth_mode": true,
-    "offensive_mode": false,
-    "learning_enabled": true
+  "swarm": {
+    "num_nodes": 32,
+    "byzantine_tolerance": 0.33
   }
 }
 ```
 
 ## Usage
 
-### Basic Operation
+### Command Line Interface
 
 ```bash
-# Start the system
-./ares_edge_system --config config.json
+# Run with default configuration
+./ares_edge_system
 
-# Interactive commands:
-status      # Show system status
-stealth     # Engage stealth mode
-attack      # Initiate countermeasures
-switch      # Emergency identity switch
-ai <query>  # Query AI orchestrator
-quit        # Shutdown system
+# Available commands:
+help    - Show available commands
+status  - Display system status
+stealth - Engage stealth mode
+attack  - Initiate countermeasures
+scan    - Scan EM spectrum
+test    - Run diagnostics
+quit    - Shutdown system
 ```
 
-### AI Orchestration
-
-The DRPP Chronopath Engine enables deterministic multi-AI orchestration:
+### API Usage
 
 ```cpp
-// Example: Configure multiple AI providers
-ares_system->configureAI(AIProvider::OPENAI_GPT4, "sk-...");
-ares_system->configureAI(AIProvider::ANTHROPIC_CLAUDE, "sk-ant-...");
-ares_system->configureAI(AIProvider::GOOGLE_GEMINI, "AI...");
+// Initialize ARES
+ares::UnifiedARESConfig config;
+config.enable_quantum_resilience = true;
+config.num_swarm_nodes = 32;
 
-// Query with consensus synthesis
-std::string response = ares_system->queryAI(
-    "Analyze threat pattern and recommend tactical response"
-);
+auto system = std::make_unique<ares::UnifiedQuantumARES>(config);
+
+// Configure AI providers
+system->configureAI("anthropic", "your-api-key");
+
+// Operations
+system->engageStealthMode();
+std::string response = system->queryAI("Analyze tactical situation");
 ```
 
-### EM Network Access
+### Unreal Engine Integration
 
-The system can automatically discover and connect to networks:
+1. Copy `unreal/ARESEdgePlugin` to your project's `Plugins` folder
+2. Enable the plugin in your project settings
+3. Use `AARESGameMode` or `AARESGameMode_Optimized`
+4. Access functionality through Blueprint or C++
 
-```cpp
-// Scan EM spectrum for available networks
-quantum_core->scanAndConnectNetworks();
+## Performance
 
-// Discovered networks include:
-// - WiFi (802.11)
-// - Cellular (LTE/5G)
-// - Bluetooth LE
-// - Ethernet
-```
+- **CEW Response Time**: <100ms guaranteed
+- **Q-Learning Updates**: >100k updates/second
+- **Byzantine Consensus**: <1ms consensus rounds
+- **GPU Memory Usage**: ~2GB baseline
+- **CPU Usage**: 4-8 cores recommended
 
-## Performance Metrics
+## Security
 
-- **AI Orchestration Latency**: <50ms deterministic
-- **Q-Learning Updates**: 1M states/second (lock-free)
-- **Homomorphic MatMul**: 10x faster with GPU optimization
-- **Byzantine Consensus**: O(n) complexity with HotStuff
-- **Quantum Signatures**: 3ms generation, 1ms verification
-- **Energy Harvesting**: Up to 100mW from ambient RF
+- Post-quantum cryptography (NIST approved)
+- Secure memory erasure (3-pass)
+- Side-channel attack resistance
+- Hardware attestation support
+- Encrypted communications
 
-## Security Considerations
+**WARNING**: This system is designed for authorized U.S. Department of Defense use only. Export restrictions under ITAR and EAR regulations apply.
 
-1. **Quantum Resistance**: All cryptographic operations use NIST PQC standards
-2. **Byzantine Tolerance**: 33% fault tolerance in consensus
-3. **Secure Erasure**: Military-grade data destruction
-4. **Identity Protection**: Hardware-attested hot-swappable identities
-5. **EM OPSEC**: Adaptive metamaterial cloaking
+## Known Hardware/Runtime Constraints
 
-## Development
-
-### Building Tests
-
-```bash
-cd build
-make test
-ctest --verbose
-```
-
-### Performance Profiling
-
-```bash
-# CUDA profiling
-nsys profile ./ares_edge_system
-ncu --set full ./ares_edge_system
-
-# CPU profiling
-perf record -g ./ares_edge_system
-perf report
-```
+- Requires NVIDIA GPU (no AMD support currently)
+- Real-time kernel recommended for optimal performance
+- Root privileges required for:
+  - Real-time thread priorities
+  - Memory locking (mlockall)
+  - CPU affinity settings
+- SDR hardware needed for RF operations
+- Loihi 2 requires Intel SDK
 
 ## Troubleshooting
 
-### CUDA Out of Memory
-- Reduce batch sizes in configuration
-- Enable unified memory: `export CUDA_MANAGED_FORCE_DEVICE_ALLOC=1`
+### CUDA Issues
+- Ensure CUDA drivers match toolkit version
+- Check GPU compute capability: `nvidia-smi --query-gpu=compute_cap --format=csv`
 
-### Network Discovery Fails
-- Ensure SDR hardware is connected
-- Check permissions: `sudo usermod -a -G plugdev $USER`
+### Performance Issues
+- Enable GPU persistence: `nvidia-smi -pm 1`
+- Set exclusive compute: `nvidia-smi -c 3`
+- Use performance governor: `cpupower frequency-set -g performance`
 
-### AI Provider Timeouts
-- Increase network_timeout_ms in ChronopathConstraints
-- Check API rate limits
+### Build Issues
+- Missing liboqs: Build from source (see Prerequisites)
+- CUDA not found: Set `CUDA_HOME` environment variable
 
 ## License
 
-This software is proprietary and confidential property of DELFICTUS I/O LLC. Unauthorized use, reproduction, or distribution is strictly prohibited.
+PROPRIETARY AND CONFIDENTIAL  
+Copyright (c) 2024 DELFICTUS I/O LLC  
+Patent Pending - Application #63/826,067
 
-## Export Control Notice
+This software contains trade secrets and proprietary information. Unauthorized use, reproduction, or distribution is strictly prohibited.
 
-This software is subject to U.S. export control laws and regulations including the International Traffic in Arms Regulations (ITAR) and Export Administration Regulations (EAR). Export, re-export, or transfer of this software to prohibited countries, entities, or individuals is strictly prohibited.
+## Support
 
-## Contact
-
-DELFICTUS I/O LLC  
-Los Angeles, California 90013  
-United States  
+For authorized users:
+- Technical issues: Repository issues
+- Security concerns: security@delfictus.io
+- Export compliance: legal@delfictus.io
 
 ---
 
-*ARES Edge System™ - Where Quantum Meets Chronopath*
+**ARES Edge System™** - Tactical superiority through autonomous edge computing

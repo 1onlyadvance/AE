@@ -1,0 +1,182 @@
+cmake_minimum_required(VERSION 3.18)
+
+# Define the project
+project(ARESEdgeSystem 
+    VERSION 1.0.0
+    LANGUAGES CXX CUDA
+    DESCRIPTION "ARES Edge System - Quantum Chronopath Superior")
+
+# Set language standards
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CUDA_STANDARD 14)
+set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+
+# Set build type if not specified
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+
+# Find required packages
+find_package(CUDA REQUIRED)
+find_package(Threads REQUIRED)
+find_package(OpenSSL REQUIRED)
+
+# Production compiler flags
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -mtune=native -ffast-math -funroll-loops -DNDEBUG")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DDEBUG -fsanitize=address")
+
+# CUDA flags for production
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DSKIP_CUDNN")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --use_fast_math")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lineinfo")
+
+# GPU architecture (adjust for your hardware)
+set(CMAKE_CUDA_ARCHITECTURES "70;75;80;86")
+
+# Include directories
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/common/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/core
+    ${CMAKE_CURRENT_SOURCE_DIR}/orchestrator
+    ${CMAKE_CURRENT_SOURCE_DIR}/optical_stealth/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/countermeasures/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/cyber_em/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/federated_learning/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/cew/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/neuromorphic/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/swarm/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/digital_twin/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/identity/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/backscatter/include
+    ${CUDA_INCLUDE_DIRS}
+)
+
+# Source files
+set(CPP_SOURCES
+    main.cpp
+    ares_edge_system.cpp
+    core/quantum_resilient_core.cpp
+    orchestrator/chronopath_engine.cpp
+    orchestrator/drpp_chronopath_engine.cpp
+    optical_stealth/src/dynamic_metamaterial_controller.cpp
+    optical_stealth/src/multi_spectral_fusion_engine.cpp
+    optical_stealth/src/rioss_synthesis_engine.cpp
+    countermeasures/src/chaos_induction_engine.cpp
+    countermeasures/src/last_man_standing_coordinator.cpp
+    countermeasures/src/self_destruct_protocol.cpp
+    cyber_em/src/em_cyber_controller.cpp
+    cyber_em/src/protocol_exploitation_engine.cpp
+    federated_learning/src/distributed_slam_engine.cpp
+    federated_learning/src/federated_learning_coordinator.cpp
+    federated_learning/src/homomorphic_computation_engine.cpp
+    federated_learning/src/neuromorphic_processor_interface.cpp
+    federated_learning/src/secure_multiparty_computation.cpp
+    identity/src/hardware_attestation_system.cpp
+    identity/src/hot_swap_identity_manager.cpp
+    backscatter/src/backscatter_communication_system.cpp
+    backscatter/src/rf_energy_harvesting_system.cpp
+    cew/src/cew_adaptive_jamming.cpp
+    cew/src/spectrum_waterfall.cpp
+    neuromorphic/src/loihi2_hardware_abstraction.cpp
+    swarm/src/byzantine_consensus_engine.cpp
+    swarm/src/distributed_task_auction.cpp
+    digital_twin/src/predictive_simulation_engine.cpp
+    digital_twin/src/realtime_state_sync.cpp
+)
+
+set(CUDA_SOURCES
+    core/quantum_core.cu
+    swarm/kernels/auction_optimization_kernels.cu
+    cew/kernels/adaptive_jamming_kernel.cu
+    cew/kernels/spectrum_waterfall_kernel.cu
+    cew/kernels/threat_classifier_kernel.cu
+    digital_twin/kernels/physics_simulation_kernels.cu
+    digital_twin/kernels/state_sync_kernels.cu
+    neuromorphic/kernels/neuromorphic_simulation_kernels.cu
+    neuromorphic/kernels/spike_encoding_kernel.cu
+    tests/performance_benchmarks.cu
+)
+
+# Optimized source files
+set(OPTIMIZED_CPP_SOURCES
+    main_optimized.cpp
+    core/quantum_resilient_core_optimized.cpp
+)
+
+set(OPTIMIZED_CUDA_SOURCES
+    cew/kernels/adaptive_jamming_kernel_optimized.cu
+)
+
+# Main executable
+add_executable(ares_edge_system ${CPP_SOURCES} ${CUDA_SOURCES})
+
+# Optimized executable
+add_executable(ares_edge_system_optimized 
+    ${OPTIMIZED_CPP_SOURCES} 
+    ${OPTIMIZED_CUDA_SOURCES}
+    ${CPP_SOURCES}
+    ${CUDA_SOURCES}
+)
+
+# Remove duplicate main files from optimized build
+set_source_files_properties(main.cpp PROPERTIES HEADER_FILE_ONLY TRUE)
+set_source_files_properties(core/quantum_resilient_core.cpp PROPERTIES HEADER_FILE_ONLY TRUE)
+set_source_files_properties(cew/kernels/adaptive_jamming_kernel.cu PROPERTIES HEADER_FILE_ONLY TRUE)
+
+# Link libraries
+target_link_libraries(ares_edge_system 
+    PRIVATE 
+    Threads::Threads
+    OpenSSL::SSL
+    OpenSSL::Crypto
+    ${CUDA_LIBRARIES}
+    ${CUDA_cudart_LIBRARY}
+    ${CUDA_curand_LIBRARY}
+)
+
+target_link_libraries(ares_edge_system_optimized 
+    PRIVATE 
+    Threads::Threads
+    OpenSSL::SSL
+    OpenSSL::Crypto
+    ${CUDA_LIBRARIES}
+    ${CUDA_cudart_LIBRARY}
+    ${CUDA_curand_LIBRARY}
+    oqs  # Open Quantum Safe library
+)
+
+# Set CUDA separable compilation
+set_property(TARGET ares_edge_system PROPERTY CUDA_SEPARABLE_COMPILATION ON)
+set_property(TARGET ares_edge_system_optimized PROPERTY CUDA_SEPARABLE_COMPILATION ON)
+
+# Test executable
+add_executable(ares_tests 
+    tests/integration_tests.cpp
+    tests/test_cew_performance.cpp
+    tests/performance_benchmarks.cu
+)
+
+target_link_libraries(ares_tests 
+    PRIVATE 
+    Threads::Threads
+    ${CUDA_LIBRARIES}
+)
+
+# Installation rules
+install(TARGETS ares_edge_system ares_edge_system_optimized
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+)
+
+# CPack configuration for deployment
+set(CPACK_PACKAGE_NAME "ARESEdgeSystem")
+set(CPACK_PACKAGE_VERSION "1.0.0")
+set(CPACK_PACKAGE_VENDOR "DELFICTUS I/O LLC")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "ARES Edge System - Quantum Chronopath Superior")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
+
+include(CPack)
