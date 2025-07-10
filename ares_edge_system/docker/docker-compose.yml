@@ -1,0 +1,112 @@
+# PROPRIETARY AND CONFIDENTIAL
+# Copyright (c) 2024 DELFICTUS I/O LLC
+# Patent Pending - Application #63/826,067
+
+version: '3.8'
+
+services:
+  ares-edge-system:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.cuda
+    image: delfictus/ares-edge-system:quantum-chronopath
+    container_name: ares-quantum-core
+    
+    # GPU support
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    
+    # Runtime configuration
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics
+      - CUDA_VISIBLE_DEVICES=0
+      - ARES_MODE=PRODUCTION
+      - ARES_QUANTUM_ENABLED=true
+      - ARES_AI_ORCHESTRATION=true
+      
+    # Volume mounts
+    volumes:
+      - ../:/workspace/ares_edge_system
+      - ares-data:/data
+      - ares-models:/models
+      - /dev/bus/usb:/dev/bus/usb  # For SDR hardware
+      
+    # Network configuration
+    network_mode: host  # Required for SDR and network discovery
+    
+    # Security
+    privileged: true  # Required for hardware access
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+      - SYS_PTRACE
+      
+    # Resource limits
+    mem_limit: 32g
+    memswap_limit: 64g
+    cpus: '16'
+    
+    # Command
+    command: >
+      bash -c "
+        echo '=== ARES Edge System - Quantum Chronopath Superior ===' &&
+        echo 'DELFICTUS I/O LLC - Patent Pending #63/826,067' &&
+        echo '===================================================' &&
+        cd /workspace/ares_edge_system &&
+        mkdir -p build && cd build &&
+        cmake -DCMAKE_BUILD_TYPE=Release .. &&
+        make -j$$(nproc) &&
+        ./ares_edge_system
+      "
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "nvidia-smi"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      
+  # Optional: Dedicated AI orchestration service
+  ares-ai-orchestrator:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.cuda
+    image: delfictus/ares-ai-orchestrator:latest
+    container_name: ares-ai-orchestrator
+    
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=0
+      - ARES_SERVICE=AI_ORCHESTRATOR
+      
+    volumes:
+      - ../orchestrator:/workspace/orchestrator
+      - ares-models:/models
+      
+    ports:
+      - "8080:8080"  # API endpoint
+      - "8443:8443"  # Secure API
+      
+    depends_on:
+      - ares-edge-system
+      
+volumes:
+  ares-data:
+    driver: local
+  ares-models:
+    driver: local

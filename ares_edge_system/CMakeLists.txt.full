@@ -1,0 +1,330 @@
+# PROPRIETARY AND CONFIDENTIAL
+# Copyright (c) 2024 DELFICTUS I/O LLC
+# Patent Pending - Application #63/826,067
+# CAGE Code: 13H70 | UEI: LXT3B9GMY4N8
+
+cmake_minimum_required(VERSION 3.20)
+project(ARESEdgeSystem CUDA CXX C)
+
+# C++ Standard
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# CUDA settings
+set(CMAKE_CUDA_STANDARD 17)
+set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+find_package(CUDA 11.8 REQUIRED)
+
+# Compiler flags for maximum performance
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -mtune=native -ffast-math -funroll-loops -ftree-vectorize -fomit-frame-pointer -flto -DNDEBUG")
+set(CMAKE_CUDA_FLAGS_RELEASE "-O3 -use_fast_math -arch=sm_86 -lineinfo -DNDEBUG")
+
+# Real-time flags
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -Wall -Wextra -Wpedantic")
+add_compile_definitions(_GNU_SOURCE)
+
+# Find packages
+find_package(OpenMP REQUIRED)
+find_package(MPI)
+find_package(Threads REQUIRED)
+find_package(Eigen3 3.4 REQUIRED)
+find_package(PCL 1.12 REQUIRED)
+find_package(OpenCV 4.5 REQUIRED)
+find_package(Boost 1.75 REQUIRED COMPONENTS system filesystem thread chrono serialization)
+find_package(PkgConfig REQUIRED)
+
+# CUDA libraries
+find_library(CUDNN_LIBRARY cudnn HINTS ${CUDA_TOOLKIT_ROOT_DIR}/lib64)
+find_library(CUBLAS_LIBRARY cublas HINTS ${CUDA_TOOLKIT_ROOT_DIR}/lib64)
+find_library(CUFFT_LIBRARY cufft HINTS ${CUDA_TOOLKIT_ROOT_DIR}/lib64)
+find_library(CUSPARSE_LIBRARY cusparse HINTS ${CUDA_TOOLKIT_ROOT_DIR}/lib64)
+find_library(CUSOLVER_LIBRARY cusolver HINTS ${CUDA_TOOLKIT_ROOT_DIR}/lib64)
+find_library(CURAND_LIBRARY curand HINTS ${CUDA_TOOLKIT_ROOT_DIR}/lib64)
+find_library(NCCL_LIBRARY nccl HINTS ${CUDA_TOOLKIT_ROOT_DIR}/lib64)
+
+# Cryptography libraries
+find_package(OpenSSL REQUIRED)
+find_library(CRYPTOPP_LIBRARY cryptopp)
+find_library(OQS_LIBRARY oqs HINTS /usr/local/lib)  # Open Quantum Safe
+
+# SDR libraries
+find_library(HACKRF_LIBRARY hackrf)
+find_library(UHD_LIBRARY uhd)  # USRP
+find_library(LIQUID_LIBRARY liquid)  # Liquid DSP
+
+# SLAM and optimization
+find_package(g2o REQUIRED)
+find_package(Ceres REQUIRED)
+
+# Homomorphic encryption
+find_package(SEAL 4.0 REQUIRED)
+
+# Networking
+find_package(CURL REQUIRED)
+find_package(RapidJSON REQUIRED)
+
+# Meta Quest 3 / OpenXR
+find_package(OpenXR REQUIRED)
+
+# Intel Loihi 2 (if available)
+find_library(LOIHI_LIBRARY loihi HINTS /opt/intel/loihi/lib)
+
+# Include directories
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CUDA_INCLUDE_DIRS}
+    ${EIGEN3_INCLUDE_DIRS}
+    ${PCL_INCLUDE_DIRS}
+    ${OpenCV_INCLUDE_DIRS}
+    ${Boost_INCLUDE_DIRS}
+    ${OPENSSL_INCLUDE_DIR}
+    ${CURL_INCLUDE_DIRS}
+    ${RapidJSON_INCLUDE_DIRS}
+    /usr/local/include  # For OQS
+)
+
+# Link directories
+link_directories(
+    ${CUDA_TOOLKIT_ROOT_DIR}/lib64
+    ${PCL_LIBRARY_DIRS}
+    /usr/local/lib
+)
+
+# Quantum-resilient core library
+cuda_add_library(quantum_core STATIC
+    core/quantum_resilient_core.cpp
+)
+target_link_libraries(quantum_core
+    ${OQS_LIBRARY}
+    ${CRYPTOPP_LIBRARY}
+    ${OPENSSL_LIBRARIES}
+    ${CUDA_LIBRARIES}
+    ${CUDNN_LIBRARY}
+    ${CUBLAS_LIBRARY}
+    pthread
+)
+
+# DRPP Chronopath Engine library
+add_library(chronopath_engine STATIC
+    orchestrator/drpp_chronopath_engine.cpp
+)
+target_link_libraries(chronopath_engine
+    ${CURL_LIBRARIES}
+    ${CUDA_LIBRARIES}
+    ${CUDNN_LIBRARY}
+    ${CUBLAS_LIBRARY}
+    ${NCCL_LIBRARY}
+    pthread
+    numa
+)
+
+# Optical stealth library
+cuda_add_library(optical_stealth STATIC
+    optical_stealth/src/dynamic_metamaterial_controller.cpp
+    optical_stealth/src/multi_spectral_fusion_engine.cpp
+    optical_stealth/src/rioss_synthesis_engine.cpp
+)
+target_link_libraries(optical_stealth
+    ${CUDA_LIBRARIES}
+    ${CUFFT_LIBRARY}
+    ${OpenCV_LIBS}
+)
+
+# Countermeasures library
+cuda_add_library(countermeasures STATIC
+    countermeasures/src/chaos_induction_engine.cpp
+    countermeasures/src/self_destruct_protocol.cpp
+    countermeasures/src/last_man_standing_coordinator.cpp
+)
+target_link_libraries(countermeasures
+    ${CUDA_LIBRARIES}
+    ${CRYPTOPP_LIBRARY}
+)
+
+# Cyber EM library
+cuda_add_library(cyber_em STATIC
+    cyber_em/src/em_cyber_controller.cpp
+    cyber_em/src/protocol_exploitation_engine.cpp
+)
+target_link_libraries(cyber_em
+    ${CUDA_LIBRARIES}
+    ${CUFFT_LIBRARY}
+    ${HACKRF_LIBRARY}
+    ${UHD_LIBRARY}
+    ${LIQUID_LIBRARY}
+)
+
+# Backscatter communications library
+cuda_add_library(backscatter STATIC
+    backscatter/src/backscatter_communication_system.cpp
+    backscatter/src/rf_energy_harvesting_system.cpp
+)
+target_link_libraries(backscatter
+    ${CUDA_LIBRARIES}
+    ${CUFFT_LIBRARY}
+    ${CUSOLVER_LIBRARY}
+)
+
+# Identity management library
+cuda_add_library(identity STATIC
+    identity/src/hardware_attestation_system.cpp
+    identity/src/hot_swap_identity_manager.cpp
+)
+target_link_libraries(identity
+    ${CUDA_LIBRARIES}
+    ${CRYPTOPP_LIBRARY}
+)
+
+# Federated learning library
+cuda_add_library(federated_learning STATIC
+    federated_learning/src/federated_learning_coordinator.cpp
+    federated_learning/src/homomorphic_computation_engine.cpp
+    federated_learning/src/distributed_slam_engine.cpp
+    federated_learning/src/secure_multiparty_computation.cpp
+    federated_learning/src/neuromorphic_processor_interface.cpp
+)
+target_link_libraries(federated_learning
+    ${CUDA_LIBRARIES}
+    ${CUDNN_LIBRARY}
+    ${CUBLAS_LIBRARY}
+    ${CUSPARSE_LIBRARY}
+    ${CUSOLVER_LIBRARY}
+    ${NCCL_LIBRARY}
+    ${MPI_LIBRARIES}
+    SEAL::seal
+    ${PCL_LIBRARIES}
+    ${g2o_LIBRARIES}
+    ${CERES_LIBRARIES}
+    ${CRYPTOPP_LIBRARY}
+)
+if(LOIHI_LIBRARY)
+    target_link_libraries(federated_learning ${LOIHI_LIBRARY})
+    target_compile_definitions(federated_learning PRIVATE HAS_LOIHI=1)
+endif()
+
+# CEW library (from original ARES)
+cuda_add_library(cew STATIC
+    cew/src/cew_adaptive_jamming.cpp
+    cew/src/spectrum_waterfall.cpp
+)
+target_link_libraries(cew
+    ${CUDA_LIBRARIES}
+    ${CUFFT_LIBRARY}
+    ${OpenCV_LIBS}
+)
+
+# Neuromorphic library (from original ARES)
+add_library(neuromorphic_base STATIC
+    neuromorphic/src/loihi2_hardware_abstraction.cpp
+)
+target_link_libraries(neuromorphic_base
+    ${CUDA_LIBRARIES}
+    pthread
+)
+
+# Swarm library (from original ARES)
+cuda_add_library(swarm STATIC
+    swarm/src/byzantine_consensus_engine.cpp
+    swarm/src/distributed_task_auction.cpp
+)
+target_link_libraries(swarm
+    ${CUDA_LIBRARIES}
+    ${MPI_LIBRARIES}
+    ${CRYPTOPP_LIBRARY}
+)
+
+# Digital twin library (from original ARES)
+cuda_add_library(digital_twin STATIC
+    digital_twin/src/realtime_state_sync.cpp
+    digital_twin/src/predictive_simulation_engine.cpp
+)
+target_link_libraries(digital_twin
+    ${CUDA_LIBRARIES}
+    ${CUDNN_LIBRARY}
+    ${PCL_LIBRARIES}
+)
+
+# Main ARES unified system executable
+cuda_add_executable(ares_edge_system
+    unified_quantum_ares.cpp
+    ares_edge_system.cpp
+    main.cpp
+    consciousness_engine.cpp
+    unified_ares_core.cpp
+    tactical_engine.cpp
+    sensor_fusion.cpp
+    threat_alarm_system.cpp
+    swarm_coordinator.cpp
+    digital_twin_engine.cpp
+    ar_visualization.cpp
+)
+
+# Link all libraries
+target_link_libraries(ares_edge_system
+    quantum_core
+    chronopath_engine
+    optical_stealth
+    countermeasures
+    cyber_em
+    backscatter
+    identity
+    federated_learning
+    cew
+    neuromorphic_base
+    swarm
+    digital_twin
+    ${OpenMP_CXX_LIBRARIES}
+    ${MPI_LIBRARIES}
+    ${CMAKE_THREAD_LIBS_INIT}
+    ${Boost_LIBRARIES}
+    ${OpenXR_LIBRARIES}
+    dl
+    rt
+    stdc++fs
+)
+
+# Set properties
+set_target_properties(ares_edge_system PROPERTIES
+    CUDA_SEPARABLE_COMPILATION ON
+    CUDA_RESOLVE_DEVICE_SYMBOLS ON
+    POSITION_INDEPENDENT_CODE ON
+)
+
+# Installation
+install(TARGETS ares_edge_system DESTINATION bin)
+install(DIRECTORY config/ DESTINATION etc/ares)
+
+# Testing
+enable_testing()
+add_subdirectory(tests)
+
+# Documentation
+find_package(Doxygen)
+if(DOXYGEN_FOUND)
+    set(DOXYGEN_GENERATE_HTML YES)
+    set(DOXYGEN_GENERATE_MAN YES)
+    doxygen_add_docs(docs
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMENT "Generating ARES documentation"
+    )
+endif()
+
+# Package configuration
+include(CPack)
+set(CPACK_PACKAGE_NAME "ARES-Edge-System")
+set(CPACK_PACKAGE_VENDOR "DELFICTUS I/O LLC")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Autonomous Reconnaissance and Electronic Supremacy")
+set(CPACK_PACKAGE_VERSION_MAJOR "1")
+set(CPACK_PACKAGE_VERSION_MINOR "0")
+set(CPACK_PACKAGE_VERSION_PATCH "0")
+set(CPACK_PACKAGE_CONTACT "DELFICTUS I/O LLC")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "cuda-toolkit-11-8, liboqs0, libcrypto++8, libhackrf0")
+
+# Security flags
+add_compile_options(-fstack-protector-strong -D_FORTIFY_SOURCE=2)
+add_link_options(-Wl,-z,relro -Wl,-z,now)
+
+# Export control notice
+message(WARNING "This software is subject to U.S. export control laws (ITAR/EAR)")
+message(WARNING "Unauthorized export or re-export is prohibited")
