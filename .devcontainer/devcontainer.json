@@ -1,0 +1,17 @@
+{
+  "name": "ARES Edge System Dev Environment",
+  "image": "nvidia/cuda:12.3.2-devel-ubuntu22.04",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools-extension-pack",
+        "ms-vscode.cmake-tools",
+        "nvidia.nsight-vscode-edition",
+        "github.copilot"
+      ]
+    }
+  },
+
+  "postCreateCommand": "apt-get update && apt-get install -y cmake"
+}
