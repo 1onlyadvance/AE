@@ -40,6 +40,7 @@
 #include <memory>
 #include <array>
 #include <vector>
+#include <cmath>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
@@ -250,22 +251,48 @@ private:
         uint32_t output_dim;  // Number of AI providers
         
         AIProvider route(const std::vector<float>& features) {
-            // Simple forward pass
-            thrust::device_vector<float> input(features);
-            thrust::device_vector<float> hidden(hidden_dim);
+            // Simple one layer network: output = softmax(W * x + b)
+            thrust::device_vector<float> input(features.begin(), features.end());
             thrust::device_vector<float> output(output_dim);
-            
-            // Hidden layer
-            cublasSgemv(/* ... */);  // Matrix-vector multiply
-            
-            // Softmax output
-            thrust::transform(/* ... */);  // Apply softmax
-            
-            // Select provider with highest score
+
+            cublasHandle_t handle;
+            cublasCreate(&handle);
+            const float alpha = 1.0f;
+            const float beta = 0.0f;
+
+            // weights expected to be row-major (output_dim x input_dim)
+            cublasSgemv(handle, CUBLAS_OP_N,
+                        output_dim,
+                        input_dim,
+                        &alpha,
+                        thrust::raw_pointer_cast(weights.data()),
+                        output_dim,
+                        thrust::raw_pointer_cast(input.data()),
+                        1,
+                        &beta,
+                        thrust::raw_pointer_cast(output.data()),
+                        1);
+
+            cublasDestroy(handle);
+
+            // Add bias
+            thrust::transform(output.begin(), output.end(), biases.begin(),
+                               output.begin(), thrust::plus<float>());
+
+            // Softmax
+            float max_val = *thrust::max_element(output.begin(), output.end());
+            thrust::transform(output.begin(), output.end(), output.begin(),
+                               [max_val] __device__(float x) {
+                                   return expf(x - max_val);
+                               });
+            float sum = thrust::reduce(output.begin(), output.end(), 0.0f);
+            thrust::transform(output.begin(), output.end(), output.begin(),
+                               [sum] __device__(float x) { return x / sum; });
+
+            // Select provider with highest probability
             auto max_iter = thrust::max_element(output.begin(), output.end());
             return static_cast<AIProvider>(
-                thrust::distance(output.begin(), max_iter)
-            );
+                thrust::distance(output.begin(), max_iter));
         }
     };
     
@@ -376,9 +403,37 @@ private:
         // Reconstruct response from majority tokens
         AIResponse result;
         result.provider = AIProvider::ENSEMBLE_VOTE;
-        
-        // ... voting logic
-        
+
+        if (responses.empty()) return result;
+
+        // Gather tokens per position
+        std::vector<std::vector<std::string>> token_grid;
+        for (const auto& response : responses) {
+            std::istringstream iss(response.content);
+            std::string token;
+            size_t idx = 0;
+            while (iss >> token) {
+                if (token_grid.size() <= idx) {
+                    token_grid.emplace_back();
+                }
+                token_grid[idx].push_back(token);
+                ++idx;
+            }
+        }
+
+        std::ostringstream oss;
+        for (auto& column : token_grid) {
+            std::unordered_map<std::string, uint32_t> counts;
+            for (const auto& tok : column) counts[tok]++;
+            auto best = std::max_element(
+                counts.begin(), counts.end(),
+                [](const auto& a, const auto& b) { return a.second < b.second; });
+            if (best != counts.end()) {
+                oss << best->first << ' ';
+            }
+        }
+
+        result.content = oss.str();
         return result;
     }
     
@@ -430,7 +485,15 @@ private:
         // Decode synthesized embedding back to text
         AIResponse result;
         result.provider = AIProvider::CONSENSUS_SYNTHESIS;
-        // ... decoding logic
+
+        std::vector<float> h_embedding(synthesized.size());
+        thrust::copy(synthesized.begin(), synthesized.end(), h_embedding.begin());
+        std::ostringstream oss;
+        for (float v : h_embedding) {
+            char c = static_cast<char>(std::round(std::fmod(std::fabs(v), 95.0f)) + 32);
+            oss << c;
+        }
+        result.content = oss.str();
         
         // Cleanup
         for (auto ptr : h_embeddings) {
@@ -740,7 +803,19 @@ private:
                 request_doc.AddMember("max_tokens_to_sample", config.max_tokens, allocator);
                 request_doc.AddMember("temperature", config.temperature, allocator);
                 break;
-                
+
+            case AIProvider::GOOGLE_GEMINI: {
+                rapidjson::Value contents(rapidjson::kArrayType);
+                rapidjson::Value entry(rapidjson::kObjectType);
+                entry.AddMember("role", "user", allocator);
+                rapidjson::Value parts(rapidjson::kArrayType);
+                parts.PushBack(rapidjson::Value(prompt.c_str(), allocator).Move(), allocator);
+                entry.AddMember("parts", parts, allocator);
+                contents.PushBack(entry, allocator);
+                request_doc.AddMember("contents", contents, allocator);
+                break;
+            }
+
             // Add other providers...
             
             default:
@@ -828,7 +903,19 @@ private:
                             response.content = response_doc["completion"].GetString();
                         }
                         break;
-                        
+
+                    case AIProvider::GOOGLE_GEMINI:
+                        if (response_doc.HasMember("candidates") &&
+                            response_doc["candidates"].IsArray() &&
+                            response_doc["candidates"].Size() > 0 &&
+                            response_doc["candidates"][0].HasMember("content")) {
+                            const auto& cont = response_doc["candidates"][0]["content"];
+                            if (cont.HasMember("parts") && cont["parts"].IsArray() && cont["parts"].Size() > 0) {
+                                response.content = cont["parts"][0]["text"].GetString();
+                            }
+                        }
+                        break;
+
                     // Add other providers...
                 }
                 
@@ -873,9 +960,10 @@ private:
             int msgs_in_queue;
             while ((msg = curl_multi_info_read(multi_handle_, &msgs_in_queue))) {
                 if (msg->msg == CURLMSG_DONE) {
-                    // Handle completed request
                     CURL* curl = msg->easy_handle;
-                    // ... process response
+                    long code = 0;
+                    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &code);
+                    // Future: match handle to request and store result
                     curl_multi_remove_handle(multi_handle_, curl);
                     curl_easy_cleanup(curl);
                 }
@@ -938,7 +1026,13 @@ public:
                 config.model_name = model.empty() ? "gemini-pro" : model;
                 config.rate_limit_rpm = 60;
                 break;
-                
+
+            case AIProvider::META_LLAMA:
+                config.endpoint = endpoint.empty() ? "https://api.meta.ai/llama" : endpoint;
+                config.model_name = model.empty() ? "llama-3" : model;
+                config.rate_limit_rpm = 60;
+                break;
+
             // Add other providers...
         }
         
