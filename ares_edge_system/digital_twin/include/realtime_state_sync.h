@@ -17,6 +17,7 @@
 #include <chrono>
 #include <thread>
 #include <immintrin.h>  // For SIMD
+#include <unordered_map>
 
 namespace ares::digital_twin {
 
@@ -262,12 +263,12 @@ private:
     std::thread sync_thread_;
     std::thread predict_thread_;
     std::thread compress_thread_;
-    std::atomic<bool> running_;
+    std::atomic<bool> running_{false};
     
     // Performance monitoring
-    std::atomic<uint64_t> total_syncs_;
-    std::atomic<uint64_t> successful_syncs_;
-    std::atomic<float> total_latency_us_;
+    std::atomic<uint64_t> total_syncs_{0};
+    std::atomic<uint64_t> successful_syncs_{0};
+    std::atomic<float> total_latency_us_{0.0f};
     std::chrono::high_resolution_clock::time_point start_time_;
     
     // Internal methods

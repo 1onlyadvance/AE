@@ -67,7 +67,7 @@ __global__ void compute_magnitude_spectrum_kernel(
         // Convert to dB with numerical stability
         float db_val;
         if (mag_sq > FLT_MIN) {
-            db_val = LOG10_SCALE * logf(mag_sq);
+            db_val = ares::cew::LOG_SCALE * logf(mag_sq);
         } else {
             db_val = -140.0f;  // Floor value
         }

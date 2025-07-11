@@ -1,3 +1,5 @@
+#include <cstring>
+#include <functional>
 /**
  * @file byzantine_consensus_engine.h
  * @brief Byzantine fault-tolerant consensus engine for swarm coordination

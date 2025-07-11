@@ -117,6 +117,9 @@ public:
     CEWMetrics get_metrics() const { return metrics_; }
     
 private:
+    // Initialization state
+    bool initialized_;
+    
     // Device pointers
     float* d_spectrum_buffer_;
     QTableState* d_qtable_;
@@ -133,6 +136,7 @@ private:
     CEWMetrics metrics_;
     
     // Internal methods
+    void cleanup();
     cudaError_t generate_waveform_bank();
     cudaError_t analyze_threats(const float* spectrum, ThreatSignature* threats);
 };

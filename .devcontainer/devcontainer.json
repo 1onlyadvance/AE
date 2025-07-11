@@ -1,7 +1,9 @@
 {
   "name": "ARES Edge System Dev Environment",
   "image": "nvidia/cuda:12.3.2-devel-ubuntu22.04",
-
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {}
+  },
   "customizations": {
     "vscode": {
       "extensions": [
@@ -13,5 +15,5 @@
     }
   },
 
-  "postCreateCommand": "apt-get update && apt-get install -y cmake"
+  "postCreateCommand": "apt-get update && apt-get install -y cmake libcudnn8 libcudnn8-dev openmpi-bin libopenmpi-dev"
 }

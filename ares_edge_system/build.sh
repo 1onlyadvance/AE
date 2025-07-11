@@ -1,158 +1,166 @@
 #!/bin/bash
-# PROPRIETARY AND CONFIDENTIAL
-# Copyright (c) 2024 DELFICTUS I/O LLC
-# Patent Pending - Application #63/826,067
 
-set -e
+# ARES Edge System Build Script
+# Production-grade build with CUDA support
 
-echo "=============================================="
-echo "ARES Edge System - Build Script"
-echo "DELFICTUS I/O LLC"
-echo "=============================================="
+set -e  # Exit on error
 
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Check for CUDA
-if ! command -v nvcc &> /dev/null; then
-    echo -e "${RED}ERROR: CUDA not found. Please install CUDA 11.7+${NC}"
-    exit 1
-fi
+echo -e "${BLUE}==================================${NC}"
+echo -e "${BLUE}ARES Edge System Build Script${NC}"
+echo -e "${BLUE}==================================${NC}"
 
-echo -e "${GREEN}✓ CUDA found:${NC} $(nvcc --version | grep release)"
-
-# Check for Docker
-if ! command -v docker &> /dev/null; then
-    echo -e "${YELLOW}WARNING: Docker not found. Using native build.${NC}"
-    NATIVE_BUILD=1
-else
-    echo -e "${GREEN}✓ Docker found${NC}"
-    NATIVE_BUILD=0
-fi
-
-# Build options
-BUILD_TYPE=${1:-Release}
-BUILD_DIR=${2:-build}
-
-echo "Build Type: $BUILD_TYPE"
-echo "Build Directory: $BUILD_DIR"
-
-# Docker build (recommended)
-if [ $NATIVE_BUILD -eq 0 ]; then
-    echo -e "\n${GREEN}Building with Docker (Recommended)${NC}"
+# Function to check CUDA installation
+check_cuda() {
+    echo -e "${BLUE}Checking CUDA installation...${NC}"
     
-    # Build Docker image
-    echo "Building Docker image..."
-    docker build -f docker/Dockerfile.cuda -t delfictus/ares-edge-system:latest .
-    
-    # Run build in container
-    echo "Running build in container..."
-    docker run --rm --gpus all \
-        -v $(pwd):/workspace/ares_edge_system \
-        delfictus/ares-edge-system:latest \
-        bash -c "cd /workspace/ares_edge_system && \
-                mkdir -p $BUILD_DIR && cd $BUILD_DIR && \
-                cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE .. && \
-                make -j\$(nproc)"
-    
-    echo -e "${GREEN}✓ Build complete!${NC}"
-    echo "Binary location: $BUILD_DIR/ares_edge_system"
-    
-else
-    # Native build
-    echo -e "\n${YELLOW}Native Build${NC}"
-    
-    # Check dependencies
-    echo "Checking dependencies..."
-    
-    MISSING_DEPS=()
-    
-    # Check for required libraries
-    if ! pkg-config --exists libcrypto++; then
-        MISSING_DEPS+=("libcrypto++-dev")
-    fi
-    
-    if ! pkg-config --exists opencv4; then
-        MISSING_DEPS+=("libopencv-dev")
-    fi
-    
-    if ! pkg-config --exists eigen3; then
-        MISSING_DEPS+=("libeigen3-dev")
-    fi
-    
-    if [ ${#MISSING_DEPS[@]} -ne 0 ]; then
-        echo -e "${RED}Missing dependencies:${NC}"
-        printf '%s\n' "${MISSING_DEPS[@]}"
-        echo -e "\nInstall with:"
-        echo "sudo apt-get install ${MISSING_DEPS[*]}"
+    if ! command -v nvcc &> /dev/null; then
+        echo -e "${RED}ERROR: CUDA compiler (nvcc) not found!${NC}"
+        echo "Please install CUDA Toolkit or add it to PATH"
         exit 1
     fi
     
-    # Create build directory
-    mkdir -p $BUILD_DIR
-    cd $BUILD_DIR
+    CUDA_VERSION=$(nvcc --version | grep "release" | awk '{print $5}' | cut -d',' -f1)
+    echo -e "${GREEN}Found CUDA version: $CUDA_VERSION${NC}"
     
-    # Configure
-    echo "Configuring..."
-    cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE ..
+    # Set CUDA paths if not already set
+    if [ -z "$CUDA_HOME" ]; then
+        CUDA_HOME=/usr/local/cuda
+        export CUDA_HOME
+        echo -e "${BLUE}Set CUDA_HOME=$CUDA_HOME${NC}"
+    fi
     
-    # Build
-    echo "Building..."
-    make -j$(nproc)
-    
-    echo -e "${GREEN}✓ Build complete!${NC}"
-    cd ..
-fi
-
-# Quick test
-echo -e "\n${GREEN}Testing CUDA availability...${NC}"
-cat > test_cuda.cu << 'EOF'
-#include <cuda_runtime.h>
-#include <iostream>
-
-int main() {
-    int deviceCount;
-    cudaGetDeviceCount(&deviceCount);
-    if (deviceCount > 0) {
-        cudaDeviceProp prop;
-        cudaGetDeviceProperties(&prop, 0);
-        std::cout << "GPU: " << prop.name << std::endl;
-        std::cout << "Compute Capability: " << prop.major << "." << prop.minor << std::endl;
-        std::cout << "Memory: " << prop.totalGlobalMem / (1024*1024) << " MB" << std::endl;
-        return 0;
-    }
-    return 1;
+    # Add CUDA to library path
+    export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
+    export PATH=$CUDA_HOME/bin:$PATH
 }
-EOF
 
-nvcc -o test_cuda test_cuda.cu 2>/dev/null
-if ./test_cuda; then
-    echo -e "${GREEN}✓ CUDA test passed${NC}"
-else
-    echo -e "${RED}✗ CUDA test failed${NC}"
-fi
-rm -f test_cuda test_cuda.cu
+# Function to detect GPU architecture
+detect_gpu_arch() {
+    echo -e "${BLUE}Detecting GPU architecture...${NC}"
+    
+    if command -v nvidia-smi &> /dev/null; then
+        GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader | head -n1)
+        echo -e "${GREEN}Detected GPU: $GPU_NAME${NC}"
+        
+        # Map GPU to compute capability
+        case "$GPU_NAME" in
+            *"V100"*) ARCH="70" ;;
+            *"T4"*) ARCH="75" ;;
+            *"A100"*) ARCH="80" ;;
+            *"A10"*|*"A40"*) ARCH="86" ;;
+            *"A30"*) ARCH="80" ;;
+            *"RTX 3090"*|*"RTX 3080"*) ARCH="86" ;;
+            *"RTX 4090"*|*"RTX 4080"*) ARCH="89" ;;
+            *"H100"*) ARCH="90" ;;
+            *) ARCH="70" ;; # Default to compute 7.0
+        esac
+        
+        echo -e "${GREEN}Using compute capability: $ARCH${NC}"
+    else
+        echo -e "${RED}WARNING: nvidia-smi not found. Using default architecture.${NC}"
+        ARCH="70"
+    fi
+}
 
-echo -e "\n=============================================="
-echo -e "${GREEN}Build Summary:${NC}"
-echo "- Binary: $BUILD_DIR/ares_edge_system"
-echo "- Config: $BUILD_TYPE"
-echo "- Platform: $(uname -s) $(uname -m)"
-echo "- GPU: $(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null || echo 'Unknown')"
+# Clean build directory
+clean_build() {
+    echo -e "${BLUE}Cleaning build directory...${NC}"
+    rm -rf build
+    mkdir -p build
+}
 
-echo -e "\n${GREEN}Next Steps:${NC}"
-echo "1. Configure AI providers:"
-echo "   export OPENAI_API_KEY='sk-...'"
-echo "   export ANTHROPIC_API_KEY='sk-ant-...'"
-echo ""
-echo "2. Run ARES:"
-echo "   ./$BUILD_DIR/ares_edge_system --openai-key \$OPENAI_API_KEY"
-echo ""
-echo "3. For Unreal Engine integration:"
-echo "   - Copy unreal/ARESEdgePlugin to your UE5 project's Plugins folder"
-echo "   - Regenerate project files"
-echo "   - Set ARESGameMode as default game mode"
-echo "=============================================="
+# Configure with CMake
+configure_project() {
+    echo -e "${BLUE}Configuring project with CMake...${NC}"
+    cd build
+    
+    cmake .. \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_CUDA_ARCHITECTURES="$ARCH" \
+        -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+    
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}CMake configuration failed!${NC}"
+        exit 1
+    fi
+}
+
+# Build project
+build_project() {
+    echo -e "${BLUE}Building project...${NC}"
+    cd build
+    
+    # Determine number of cores
+    if [ -f /proc/cpuinfo ]; then
+        CORES=$(grep -c ^processor /proc/cpuinfo)
+    else
+        CORES=4
+    fi
+    
+    echo -e "${BLUE}Building with $CORES cores...${NC}"
+    make -j$CORES
+    
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Build failed!${NC}"
+        exit 1
+    fi
+}
+
+# Main execution
+main() {
+    # Parse arguments
+    CLEAN=false
+    ARCH=""
+    
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --clean)
+                CLEAN=true
+                shift
+                ;;
+            --arch)
+                ARCH="$2"
+                shift 2
+                ;;
+            *)
+                echo "Unknown option: $1"
+                echo "Usage: $0 [--clean] [--arch <compute_capability>]"
+                exit 1
+                ;;
+        esac
+    done
+    
+    # Check CUDA
+    check_cuda
+    
+    # Detect GPU if arch not specified
+    if [ -z "$ARCH" ]; then
+        detect_gpu_arch
+    fi
+    
+    # Clean if requested
+    if [ "$CLEAN" = true ]; then
+        clean_build
+    fi
+    
+    # Ensure build directory exists
+    mkdir -p build
+    
+    # Configure and build
+    configure_project
+    build_project
+    
+    echo -e "${GREEN}==================================${NC}"
+    echo -e "${GREEN}Build completed successfully!${NC}"
+    echo -e "${GREEN}Executable: build/ares_edge_system${NC}"
+    echo -e "${GREEN}==================================${NC}"
+}
+
+# Run main function
+main "$@"

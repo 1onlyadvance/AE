@@ -1,3 +1,6 @@
+#include <cuda_runtime.h>
+#include <cublas_v2.h>
+#include <cusolverDn.h>
 /**
  * @file distributed_task_auction.h
  * @brief Market-based task allocation system for autonomous swarm coordination

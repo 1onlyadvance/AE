@@ -17,6 +17,10 @@
 #include <chrono>
 #include <array>
 #include <optional>
+#include <cmath>
+#include <string>
+#include <thread>
+#include <atomic>
 
 namespace ares::digital_twin {
 
@@ -55,7 +59,8 @@ enum class ScenarioType : uint8_t {
     ADVERSARIAL = 2,        // Enemy actions
     ENVIRONMENTAL = 3,      // Weather, terrain changes
     EMERGENT = 4,          // Swarm behaviors
-    CONTINGENCY = 5        // What-if analysis
+    CONTINGENCY = 5,        // What-if analysis
+    MONTE_CARLO = 6         // Monte Carlo simulation
 };
 
 // Physics state representation
@@ -118,7 +123,7 @@ struct PredictionResult {
 struct Scenario {
     uint64_t scenario_id;
     ScenarioType type;
-    std::string description;
+    char description[256];
     
     // Initial conditions
     std::unordered_map<uint64_t, PhysicsState> entity_states;
@@ -133,7 +138,7 @@ struct Scenario {
     struct Event {
         float time_s;
         uint64_t entity_id;
-        std::string event_type;
+        char event_type[64];
         std::vector<float> parameters;
     };
     std::vector<Event> events;
@@ -327,13 +332,13 @@ private:
     // Performance tracking
     float avg_prediction_time_ms_;
     float physics_accuracy_;
-    std::atomic<uint64_t> total_predictions_;
+    std::atomic<uint64_t> total_predictions_{0};
     
     // Worker threads
     std::thread physics_thread_;
     std::thread ml_thread_;
     std::thread scenario_thread_;
-    std::atomic<bool> running_;
+    std::atomic<bool> running_{false};
     
     // Internal methods
     void physics_worker();
@@ -460,12 +465,12 @@ __global__ void trajectory_optimization_kernel(
 // Utility functions for differentiable simulation
 template<typename T>
 __device__ T smooth_max(T a, T b, T smoothness = 1.0) {
-    return log(exp(a * smoothness) + exp(b * smoothness)) / smoothness;
+    return logf(expf(a * smoothness) + expf(b * smoothness)) / smoothness;
 }
 
 template<typename T>
 __device__ T smooth_abs(T x, T epsilon = 1e-6) {
-    return sqrt(x * x + epsilon);
+    return sqrtf(x * x + epsilon);
 }
 
 // Contact force models

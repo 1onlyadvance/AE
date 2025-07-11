@@ -12,7 +12,7 @@
 #include <cooperative_groups.h>
 #include <cub/cub.cuh>
 #include <curand_kernel.h>
-#include "cuda_helpers.h"
+#include "../../common/include/cuda_helpers.h"
 namespace cg = cooperative_groups;
 
 namespace ares::digital_twin::prediction_kernels {
@@ -631,128 +631,24 @@ __global__ void trajectory_optimization_kernel(
     trajectory[idx] = current_state;
 }
 
-/**
- * @brief Contact force computation for collision response
- */
-__device__ float3 compute_contact_force(
-    float3 relative_position,
-    float3 relative_velocity,
-    float stiffness,
-    float damping,
-    float friction
-) {
-    float distance = length(relative_position);
-    
-    if (distance < EPSILON) {
-        return make_float3(0.0f, 0.0f, 0.0f);
-    }
-    
-    float3 normal = relative_position / distance;
-    
-    // Normal force (spring-damper model)
-    float penetration = fmaxf(0.0f, 1.0f - distance);  // Assuming unit collision radius
-    float normal_velocity = dot(relative_velocity, normal);
-    float normal_force = stiffness * penetration - damping * normal_velocity;
-    
-    // Friction force
-    float3 tangent_velocity = relative_velocity - normal_velocity * normal;
-    float tangent_speed = length(tangent_velocity);
-    
-    float3 friction_force = make_float3(0.0f, 0.0f, 0.0f);
-    if (tangent_speed > EPSILON) {
-        float3 tangent_direction = tangent_velocity / tangent_speed;
-        float max_friction = friction * fabsf(normal_force);
-        float friction_magnitude = fminf(max_friction, damping * tangent_speed);
-        friction_force = -friction_magnitude * tangent_direction;
-    }
-    
-    return normal_force * normal + friction_force;
+} // namespace prediction_kernels
+
+// Utility functions for vector operations
+__device__ inline float length(const float3& v) {
+    return sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
 }
 
-/**
- * @brief Aerodynamic drag computation
- */
-__device__ float3 compute_drag_force(
-    float3 velocity,
-    float drag_coefficient,
-    float cross_sectional_area,
-    float air_density
-) {
-    float speed = length(velocity);
-    
-    if (speed < EPSILON) {
-        return make_float3(0.0f, 0.0f, 0.0f);
-    }
-    
-    // Drag force: F = 0.5 * ρ * v² * Cd * A
-    float drag_magnitude = 0.5f * air_density * speed * speed * 
-                          drag_coefficient * cross_sectional_area;
-    
-    // Drag opposes velocity
-    return -(drag_magnitude / speed) * velocity;
+__device__ inline float dot(const float3& a, const float3& b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
-/**
- * @brief Differentiable contact model for optimization
- */
-__global__ void differentiable_contact_kernel(
-    const float* positions,
-    const float* velocities,
-    float* contact_forces,
-    float* contact_jacobians,   // For gradient computation
-    float stiffness,
-    float smoothness,
-    uint32_t num_entities
-) {
-    const uint32_t entity_a = blockIdx.x;
-    const uint32_t entity_b = blockIdx.y;
-    
-    if (entity_a >= num_entities || entity_b >= num_entities || entity_a == entity_b) {
-        return;
-    }
-    
-    // Load positions
-    float3 pos_a = make_float3(
-        positions[entity_a * 3 + 0],
-        positions[entity_a * 3 + 1],
-        positions[entity_a * 3 + 2]
-    );
-    
-    float3 pos_b = make_float3(
-        positions[entity_b * 3 + 0],
-        positions[entity_b * 3 + 1],
-        positions[entity_b * 3 + 2]
-    );
-    
-    float3 delta = pos_b - pos_a;
-    float distance = length(delta);
-    
-    // Smooth contact function
-    float contact_radius = 1.0f;
-    float penetration = smooth_max(contact_radius - distance, 0.0f, smoothness);
-    
-    if (penetration > 0) {
-        float3 normal = delta / (distance + EPSILON);
-        float force_magnitude = stiffness * penetration * penetration;  // Quadratic for smoothness
-        
-        // Apply forces
-        atomicAdd(&contact_forces[entity_a * 3 + 0], -force_magnitude * normal.x);
-        atomicAdd(&contact_forces[entity_a * 3 + 1], -force_magnitude * normal.y);
-        atomicAdd(&contact_forces[entity_a * 3 + 2], -force_magnitude * normal.z);
-        
-        atomicAdd(&contact_forces[entity_b * 3 + 0], force_magnitude * normal.x);
-        atomicAdd(&contact_forces[entity_b * 3 + 1], force_magnitude * normal.y);
-        atomicAdd(&contact_forces[entity_b * 3 + 2], force_magnitude * normal.z);
-        
-        // Store Jacobian for gradient computation
-        if (contact_jacobians != nullptr) {
-            // Derivative of force with respect to position
-            float dF_dx = 2.0f * stiffness * penetration / (distance + EPSILON);
-            
-            uint32_t jac_idx = entity_a * num_entities + entity_b;
-            contact_jacobians[jac_idx] = dF_dx;
-        }
-    }
+// Utility functions for differentiable simulation
+template<typename T>
+__device__ T smooth_max(T a, T b, T smoothness = 1.0) {
+    return (a + b) - (a - b) * fmaxf(0.0, fminf(1.0, (a - b) / smoothness));
 }
 
-} // namespace ares::digital_twin::prediction_kernels
+template<typename T>
+__device__ T smooth_min(T a, T b, T smoothness = 1.0) {
+    return (a + b) - (b - a) * fmaxf(0.0, fminf(1.0, (b - a) / smoothness));
+}
